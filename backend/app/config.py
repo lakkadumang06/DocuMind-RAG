@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -79,6 +79,23 @@ class Settings(BaseSettings):
     api_port: int = 8000
     cors_origins: list[str] = ["http://localhost:3000"]
     log_level: str = "INFO"
+
+    @field_validator(
+        "openai_api_key",
+        "anthropic_api_key",
+        "google_api_key",
+        "groq_api_key",
+        "qdrant_api_key",
+        "llm_model",
+        "embedding_model",
+        mode="before",
+    )
+    @classmethod
+    def _empty_string_is_none(cls, value: object) -> object:
+        """Treat blank values from .env (e.g. 'GROQ_API_KEY=') as not set."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
 
     @property
     def bm25_index_path(self) -> Path:
