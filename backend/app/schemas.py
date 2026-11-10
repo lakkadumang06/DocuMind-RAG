@@ -40,14 +40,20 @@ class RetrievedChunk(BaseModel):
     """A chunk returned by a retriever together with its score."""
 
     chunk: Chunk
-    score: float = Field(description="Fused or raw relevance score, higher is better.")
+    score: float = Field(
+        ge=0.0, le=1.0, description="Normalised relevance in [0, 1] used for the threshold."
+    )
     dense_rank: int | None = None
     bm25_rank: int | None = None
+    dense_score: float | None = Field(default=None, description="Raw cosine similarity.")
+    bm25_score: float | None = Field(default=None, description="Raw BM25 score.")
 
 
 class Citation(BaseModel):
     """A pointer to the exact passage that supports part of an answer."""
 
+    marker: int = Field(ge=1, description="The [n] number used in the answer text.")
+    chunk_id: str
     document_id: str
     document_name: str
     page: int | None = None

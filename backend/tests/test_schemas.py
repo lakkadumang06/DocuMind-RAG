@@ -42,6 +42,8 @@ def test_citation_from_chunk() -> None:
         language="en",
     )
     cit = Citation(
+        marker=1,
+        chunk_id=chunk.id,
         document_id=chunk.document_id,
         document_name=chunk.document_name,
         page=chunk.page,

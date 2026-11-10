@@ -27,7 +27,7 @@ DEFAULT_CHAT_MODELS: dict[str, str] = {
     "anthropic": "claude-sonnet-5-5",
     "gemini": "gemini-2.5-flash",
     "groq": "llama-3.3-70b-versatile",
-    "ollama": "llama3.1",
+    "ollama": "qwen3:8b",
 }
 
 DEFAULT_EMBEDDING_MODELS: dict[str, str] = {
@@ -62,7 +62,7 @@ PRICES: dict[str, Price] = {
     "text-embedding-3-large": Price(0.13),
     "gemini-embedding-001": Price(0.15),
     # local models cost electricity, not dollars
-    "llama3.1": Price(0.0, 0.0),
+    "qwen3:8b": Price(0.0, 0.0),
     "nomic-embed-text": Price(0.0),
 }
 
@@ -133,7 +133,11 @@ def get_llm(
     if provider == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=model, temperature=temperature, base_url=settings.ollama_base_url)
+        # reasoning=False turns off the <think> blocks of models like qwen3; RAG answers
+        # should be grounded in the context, not in long hidden deliberation.
+        return ChatOllama(
+            model=model, temperature=temperature, base_url=settings.ollama_base_url, reasoning=False
+        )
 
     raise UnknownProviderError(f"Unknown LLM provider '{provider}'.")
 
