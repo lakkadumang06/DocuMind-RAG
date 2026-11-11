@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CHAT_MODELS: dict[str, str] = {
     "openai": "gpt-4.1-mini",
     "anthropic": "claude-sonnet-5-5",
-    "gemini": "gemini-2.5-flash",
+    "gemini": "gemini-3.5-flash",
     "groq": "llama-3.3-70b-versatile",
     "ollama": "qwen3:8b",
 }
@@ -53,6 +53,7 @@ PRICES: dict[str, Price] = {
     "gpt-4.1": Price(2.00, 8.00),
     "claude-sonnet-5-5": Price(3.00, 15.00),
     "claude-haiku-5-5": Price(1.00, 5.00),
+    "gemini-3.5-flash": Price(1.50, 9.00),  # output includes thinking tokens
     "gemini-2.5-flash": Price(0.30, 2.50),
     "gemini-2.5-pro": Price(1.25, 10.00),
     "llama-3.3-70b-versatile": Price(0.59, 0.79),

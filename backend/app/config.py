@@ -30,13 +30,13 @@ class Settings(BaseSettings):
     )
 
     # --- LLM / embeddings -------------------------------------------------
-    llm_provider: Provider = "groq"
+    llm_provider: Provider = "gemini"
     llm_model: str | None = Field(
         default=None, description="Override the provider's default chat model."
     )
     llm_temperature: float = 0.0
 
-    embedding_provider: EmbeddingProvider = "ollama"
+    embedding_provider: EmbeddingProvider = "gemini"
     embedding_model: str | None = Field(
         default=None, description="Override the provider's default embedding model."
     )
