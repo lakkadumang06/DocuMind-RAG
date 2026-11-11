@@ -21,7 +21,10 @@ from app.retrieval.bm25 import BM25Retriever
 from app.retrieval.hybrid import HybridRetriever
 from app.retrieval.vector import DenseRetriever
 from app.schemas import ChatRequest
+from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from langchain_core.messages import AIMessage, AIMessageChunk
+from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 
 
 @pytest.fixture
@@ -164,3 +167,52 @@ def test_follow_up_uses_rewritten_query(
     assert first.answer_found and second.answer_found
     assert "RMA" in second.citations[0].quote
     assert len(answerer.memory.history("s")) == 2
+
+
+def test_inline_confidence_is_stripped(retriever: HybridRetriever, test_settings: Settings) -> None:
+    # model forgot the newline before the marker
+    answerer = _answerer(
+        ["The warranty is 24 months [1]. CONFIDENCE: 0.9"], retriever, test_settings
+    )
+    events = list(answerer.stream(ChatRequest(question="How long is the warranty period?")))
+    tokens = "".join(e.token for e in events if e.type == "token")
+    final = events[-1].answer
+    assert final is not None
+    assert final.answer == "The warranty is 24 months [1]."
+    assert "CONFIDENCE" not in tokens
+    assert parse_confidence("x [1]. Confidence: 0,8") == ("x [1].", 0.8)
+
+
+class _ContentBlockModel(BaseChatModel):
+    """Fake model that streams list-of-blocks content like Gemini 3 does."""
+
+    reply: str
+
+    @property
+    def _llm_type(self) -> str:
+        return "content-blocks"
+
+    def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001
+        block = [{"type": "text", "text": self.reply}]
+        return ChatResult(generations=[ChatGeneration(message=AIMessage(content=block))])
+
+    def _stream(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ANN001
+        for word in self.reply.split(" "):
+            part = [{"type": "text", "text": word + " ", "index": 0}]
+            yield ChatGenerationChunk(message=AIMessageChunk(content=part))
+        signature = [{"type": "text", "text": "", "extras": {"signature": "abc"}, "index": 0}]
+        yield ChatGenerationChunk(message=AIMessageChunk(content=signature))
+
+
+def test_content_block_models_stream_plain_text(
+    retriever: HybridRetriever, test_settings: Settings
+) -> None:
+    llm = _ContentBlockModel(reply="24 months [1].\nCONFIDENCE: 0.9")
+    answerer = RagAnswerer(llm, retriever, settings=test_settings)
+    events = list(answerer.stream(ChatRequest(question="How long is the warranty period?")))
+    tokens = "".join(e.token for e in events if e.type == "token")
+    final = events[-1].answer
+    assert final is not None and final.answer_found
+    assert "{'type'" not in tokens and "signature" not in tokens
+    assert tokens.strip() == final.answer == "24 months [1]."
+    assert final.citations and final.confidence > 0.7

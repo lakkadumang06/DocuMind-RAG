@@ -36,6 +36,9 @@ _MARKER_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 _CONFIDENCE_RE = re.compile(
     r"^\s*CONFIDENCE\s*[:=]\s*([01](?:[.,]\d+)?)\s*$", re.IGNORECASE | re.MULTILINE
 )
+# Models sometimes append the marker to the last sentence instead of a new line:
+# "24 months [1]. CONFIDENCE: 1". This catches it at the very end of the text.
+_CONFIDENCE_TAIL_RE = re.compile(r"\s*CONFIDENCE\s*[:=]\s*([01](?:[.,]\d+)?)\s*$", re.IGNORECASE)
 
 
 @dataclass
@@ -67,8 +70,8 @@ def parse_markers(text: str) -> list[int]:
 
 
 def parse_confidence(text: str) -> tuple[str, float | None]:
-    """Split off the trailing CONFIDENCE line. Returns (answer_text, confidence or None)."""
-    match = _CONFIDENCE_RE.search(text)
+    """Split off the CONFIDENCE marker. Returns (answer_text, confidence or None)."""
+    match = _CONFIDENCE_TAIL_RE.search(text) or _CONFIDENCE_RE.search(text)
     if not match:
         return text.strip(), None
     value = float(match.group(1).replace(",", "."))
@@ -189,7 +192,9 @@ class RagAnswerer:
         pending = ""  # text held back until we know it is neither NO_ANSWER nor CONFIDENCE
         decided = False  # have we seen enough text to rule out NO_ANSWER?
         for piece in self.llm.stream(messages):
-            text = piece.content if isinstance(piece.content, str) else str(piece.content)
+            # .text flattens content blocks: newer models (e.g. Gemini 3) stream a list of
+            # {"type": "text", ...} parts plus thought signatures instead of a plain string.
+            text = piece.text
             if not text:
                 continue
             full += text
@@ -208,7 +213,8 @@ class RagAnswerer:
                 emit = "\n".join(ln for ln in head.split("\n") if not _CONFIDENCE_RE.match(ln))
                 if emit:
                     yield ("token", emit + "\n")
-        if pending and not _CONFIDENCE_RE.match(pending):
+        pending = _CONFIDENCE_TAIL_RE.sub("", pending)
+        if pending.strip():
             yield ("token", pending)
         yield ("done", full)
 

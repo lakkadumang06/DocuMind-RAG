@@ -61,7 +61,7 @@ def rewrite_query(
         return question
     prompt = QUERY_REWRITE_PROMPT.format(history=history, question=question)
     try:
-        rewritten = str(llm.invoke([HumanMessage(content=prompt)]).content).strip().strip('"')
+        rewritten = llm.invoke([HumanMessage(content=prompt)]).text.strip().strip('"')
     except Exception as exc:  # noqa: BLE001 - fall back to the raw question
         logger.warning("query rewrite failed: %s", exc)
         return question

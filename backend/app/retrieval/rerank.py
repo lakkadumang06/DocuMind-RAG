@@ -64,7 +64,7 @@ class LLMReranker:
         ]
         try:
             response = self.llm.invoke(messages)
-            scores = _parse_scores(str(response.content), len(chunks))
+            scores = _parse_scores(response.text, len(chunks))
         except Exception as exc:  # noqa: BLE001 - never let re-ranking break answering
             logger.warning("re-ranking failed, keeping retrieval order: %s", exc)
             return chunks
