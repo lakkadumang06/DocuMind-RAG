@@ -26,7 +26,7 @@ DEFAULT_CHAT_MODELS: dict[str, str] = {
     "openai": "gpt-4.1-mini",
     "anthropic": "claude-sonnet-5-5",
     "gemini": "gemini-3.5-flash",
-    "groq": "llama-3.3-70b-versatile",
+    "groq": "openai/gpt-oss-120b",
     "ollama": "qwen3:8b",
 }
 
@@ -56,7 +56,7 @@ PRICES: dict[str, Price] = {
     "gemini-3.5-flash": Price(1.50, 9.00),  # output includes thinking tokens
     "gemini-2.5-flash": Price(0.30, 2.50),
     "gemini-2.5-pro": Price(1.25, 10.00),
-    "llama-3.3-70b-versatile": Price(0.59, 0.79),
+    "openai/gpt-oss-120b": Price(0.15, 0.60),
     "llama-3.1-8b-instant": Price(0.05, 0.08),
     # embedding models
     "text-embedding-3-small": Price(0.02),

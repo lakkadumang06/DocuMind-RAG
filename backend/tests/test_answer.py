@@ -216,3 +216,11 @@ def test_content_block_models_stream_plain_text(
     assert "{'type'" not in tokens and "signature" not in tokens
     assert tokens.strip() == final.answer == "24 months [1]."
     assert final.citations and final.confidence > 0.7
+
+
+def test_full_width_citation_brackets_are_accepted() -> None:
+    """gpt-oss style 【2】 markers count as citations and are normalised to [2]."""
+    assert parse_markers("Frist 24 Monate【2】, siehe auch 【1, 3】.") == [2, 1, 3]
+    text, conf = parse_confidence("Frist 24 Monate【2】.\nCONFIDENCE: 0.8")
+    assert text == "Frist 24 Monate[2]."
+    assert conf == 0.8

@@ -32,7 +32,8 @@ from app.schemas import ChatAnswer, ChatRequest, Citation, RetrievedChunk
 
 logger = logging.getLogger(__name__)
 
-_MARKER_RE = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+# Some models (e.g. gpt-oss) write full-width brackets: 【2】 instead of [2].
+_MARKER_RE = re.compile(r"[\[【](\d+(?:\s*,\s*\d+)*)[\]】]")
 _CONFIDENCE_RE = re.compile(
     r"^\s*CONFIDENCE\s*[:=]\s*([01](?:[.,]\d+)?)\s*$", re.IGNORECASE | re.MULTILINE
 )
@@ -69,8 +70,14 @@ def parse_markers(text: str) -> list[int]:
     return seen
 
 
+def normalise_markers(text: str) -> str:
+    """Rewrite full-width citation brackets to plain [n] so the UI can render them."""
+    return _MARKER_RE.sub(lambda m: f"[{m.group(1)}]", text)
+
+
 def parse_confidence(text: str) -> tuple[str, float | None]:
     """Split off the CONFIDENCE marker. Returns (answer_text, confidence or None)."""
+    text = normalise_markers(text)
     match = _CONFIDENCE_TAIL_RE.search(text) or _CONFIDENCE_RE.search(text)
     if not match:
         return text.strip(), None
