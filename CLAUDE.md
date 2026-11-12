@@ -27,6 +27,8 @@ make test                                         # pytest, no API keys or Docke
 make lint                                         # ruff check
 make format                                       # ruff format + fix
 make sample-docs                                  # regenerate data/sample_docs
+make qdrant / make ingest / make api / make web   # same as the raw commands below
+make evals                                        # run evals, writes backend/evals/results.md (calls the real LLM, costs money)
 cd backend && .venv/bin/python -m app.ingest.pipeline ../data/sample_docs [--force]
 cd backend && .venv/bin/python -m app.rag.answer "question" [--mode dense|bm25|hybrid] [--debug]
 cd backend && .venv/bin/uvicorn app.api:app --reload --port 8000   # API, docs at /docs
@@ -54,6 +56,7 @@ backend/app/
   retrieval/       vector.py (dense), bm25.py, hybrid.py (Reciprocal Rank Fusion), rerank.py (LLM, off by default)
   rag/             prompts.py, memory.py (session history + query rewrite), answer.py (RagAnswerer + CLI)
   api.py           FastAPI routes; AppState wires everything; /chat streams Server-Sent Events
+backend/evals/     dataset.json (35 golden questions), run_evals.py, results.md
 backend/tests/     pytest suite using in-memory Qdrant, DeterministicFakeEmbedding and fake chat models
 frontend/          app/page.tsx, components/ (Sidebar, Chat, AnswerText, CitationPanel, DebugPanel), lib/api.ts
 scripts/           make_sample_docs.py (fictional "Rheintal Antriebstechnik GmbH" documents)
