@@ -164,6 +164,24 @@ policy, an IT security guideline, a German travel expense policy, an onboarding 
 maintenance procedure. They contain numbered sections and tables on purpose, so that chunking
 and page-level citations actually matter.
 
+## Deploy on Render
+
+`render.yaml` describes two free Docker web services (`documind-api`, `documind-web`). Qdrant
+is not hosted on Render; use the free tier of [Qdrant Cloud](https://cloud.qdrant.io).
+
+1. Create a Qdrant Cloud cluster and copy its URL and API key.
+2. Render dashboard -> **New** -> **Blueprint** -> select this repository. Render reads
+   `render.yaml` and asks for the secret values: `GOOGLE_API_KEY` (or `GROQ_API_KEY`),
+   `QDRANT_URL`, `QDRANT_API_KEY`.
+3. If you rename the services, update `CORS_ORIGINS` on the API and `NEXT_PUBLIC_API_URL`
+   on the web service to match the new `*.onrender.com` hostnames and redeploy the web
+   service (the URL is baked in at build time).
+4. Open the web URL and click **Load sample documents**.
+
+Free-tier notes: services sleep after 15 minutes without traffic, so the first request takes
+about a minute; the disk is ephemeral, so uploads and the BM25 index are lost on every deploy
+or restart (re-load the samples, or attach a Render Disk at `/app/data` on a paid plan).
+
 ## Evaluation results
 
 Measured on 2026-11-10 with a fully local setup (qwen3:8b for answers and as judge,

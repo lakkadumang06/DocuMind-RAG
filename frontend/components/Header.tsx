@@ -1,6 +1,7 @@
 "use client";
 
-import { CircleHelp, FolderOpen, MessageSquarePlus } from "lucide-react";
+import Link from "next/link";
+import { CircleHelp, FolderOpen, Info, MessageSquarePlus } from "lucide-react";
 import type { HealthResponse } from "@/lib/types";
 import ThemeToggle from "./ThemeToggle";
 
@@ -72,6 +73,13 @@ export default function Header({
         >
           <CircleHelp className="h-4.5 w-4.5" />
         </button>
+        <Link
+          href="/about"
+          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line px-3 text-xs font-medium text-ink-2 transition hover:bg-surface-2 hover:text-ink"
+        >
+          <Info className="h-3.5 w-3.5" />
+          <span>About Us</span>
+        </Link>
         <ThemeToggle />
         <button
           type="button"

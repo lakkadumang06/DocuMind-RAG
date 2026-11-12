@@ -1,0 +1,15 @@
+.git
+.venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/*.egg-info
+backend/tests
+backend/evals
+frontend
+data/index
+data/uploads
+docs
+.env

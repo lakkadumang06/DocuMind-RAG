@@ -15,7 +15,9 @@ services:
     restart: unless-stopped
 
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: documind-api
     env_file: .env
     environment:

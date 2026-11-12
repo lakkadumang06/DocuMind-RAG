@@ -1,0 +1,43 @@
+# Render Blueprint: two Docker web services. Qdrant runs on Qdrant Cloud (free tier).
+# Dashboard -> New -> Blueprint -> pick this repo. Fill in the sync: false values when asked.
+services:
+  - type: web
+    name: documind-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: QDRANT_URL
+        sync: false          # https://xxxx.cloud.qdrant.io:6333
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: QDRANT_COLLECTION
+        value: documind_chunks
+      - key: CORS_ORIGINS
+        value: '["https://documind-web.onrender.com"]'
+      - key: LOG_LEVEL
+        value: INFO
+
+  - type: web
+    name: documind-web
+    runtime: docker
+    plan: free
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: NEXT_PUBLIC_API_URL
+        value: https://documind-api.onrender.com
