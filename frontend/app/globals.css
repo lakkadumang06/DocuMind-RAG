@@ -1,37 +1,194 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Inter", sans-serif;
-}
+/* Dark mode is driven by data-theme on <html>, set before paint in layout.tsx. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* ---------- design tokens ---------- */
 :root {
   color-scheme: light;
+  --bg: #f6f4ef; /* warm paper */
+  --surface: #ffffff;
+  --surface-2: #efece5;
+  --line: #e2ddd3;
+  --line-strong: #cfc8bb;
+  --ink: #1c1a16;
+  --ink-2: #5c574d;
+  --ink-3: #8c867a;
+  --accent: #0f6e63; /* deep teal */
+  --accent-strong: #0b5a51;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3f1ee;
+  --ok: #1f7a4d;
+  --ok-soft: #e3f3ea;
+  --warn: #9a6200;
+  --warn-soft: #fbf0d9;
+  --danger: #b3261e;
+  --danger-soft: #fbe7e5;
+  --user-bubble: #1c1a16;
+  --user-ink: #f6f4ef;
+  --shadow: 0 1px 2px rgb(28 26 22 / 0.06), 0 8px 24px -12px rgb(28 26 22 / 0.18);
 }
 
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121412;
+  --surface: #1a1d1a;
+  --surface-2: #222622;
+  --line: #2c312c;
+  --line-strong: #3b413b;
+  --ink: #ecebe6;
+  --ink-2: #aaa8a0;
+  --ink-3: #777570;
+  --accent: #3fb8a8;
+  --accent-strong: #5ccbbc;
+  --accent-ink: #0b1a17;
+  --accent-soft: #163631;
+  --ok: #5fc98e;
+  --ok-soft: #153626;
+  --warn: #e3b25c;
+  --warn-soft: #3a2d10;
+  --danger: #f08a82;
+  --danger-soft: #42201d;
+  --user-bubble: #ecebe6;
+  --user-ink: #121412;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-user-bubble: var(--user-bubble);
+  --color-user-ink: var(--user-ink);
+  --shadow-card: var(--shadow);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ---------- base ---------- */
 html,
 body {
   height: 100%;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* subtle paper grain so large empty areas do not look flat */
+.paper {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--line) 0.6px, transparent 0.6px);
+  background-size: 22px 22px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 96, "SOFT" 30;
 }
 
 /* thin scrollbars for the panels */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
 .scroll-thin::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: theme(--color-slate-300);
+  background: var(--line-strong);
   border-radius: 9999px;
 }
 
+/* ---------- motion ---------- */
 @keyframes blink {
   50% {
-    opacity: 0.2;
+    opacity: 0.15;
   }
 }
 .cursor-blink {
   animation: blink 1s steps(1) infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.25s ease-out both;
+}
+
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+/* @utility so they work with responsive variants like sm:drawer-right */
+@utility drawer-left {
+  animation: slide-in-left 0.22s ease-out both;
+}
+@utility drawer-right {
+  animation: slide-in-right 0.22s ease-out both;
+}
+@utility sheet-up {
+  animation: slide-up 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* iOS: keep the composer above the home indicator */
+.safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }

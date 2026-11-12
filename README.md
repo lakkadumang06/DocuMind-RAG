@@ -38,8 +38,8 @@ DocuMind is my answer to that problem and a portfolio project for AI working-stu
 | Answers | Structured `ChatAnswer`: answer text, list of citations (document, page, section, verbatim quote), confidence, `answer_found`. Answers in the language of the question (English or German). |
 | Memory | Per-session conversation history with query rewriting, so "and what about the warranty?" becomes a standalone question. |
 | Model layer | `get_llm()` / `get_embeddings()` for OpenAI, Anthropic, Gemini, Groq and local Ollama. Switch with two environment variables. Only `llm.py` imports vendor SDKs. |
-| API | FastAPI: `POST /documents` (upload + ingest), `GET /documents`, `DELETE /documents/{id}`, `POST /chat` (Server-Sent Events: streamed tokens, then a final event with citations), `GET /health`. |
-| UI | Next.js 16 + TypeScript + Tailwind: drag-and-drop upload with progress, document list, streamed chat, clickable citation chips, retrieval mode toggle, collapsible retrieval debug panel with scores. |
+| API | FastAPI: `POST /documents` (upload + ingest), `POST /documents/samples` (index the bundled sample files), `GET /documents`, `DELETE /documents/{id}`, `POST /chat` (Server-Sent Events: streamed tokens, then a final event with citations), `GET /health`. |
+| UI | Next.js 16 + TypeScript + Tailwind: responsive three-column layout (drawer and bottom sheet on phones), light and dark mode, one-click sample documents and a "How it works" guide for new users, drag-and-drop upload with progress, streamed chat, clickable citation chips, retrieval mode toggle, collapsible retrieval debug panel with scores. |
 | Quality | 61 pytest tests that run **without API keys** (in-memory Qdrant, fake embeddings, fake LLM), ruff, GitHub Actions CI for backend, frontend and Docker images. |
 
 ## Architecture
@@ -120,6 +120,10 @@ make ask Q="Wie lange ist die Gewährleistung?"   # try it from the terminal
 make api                      # terminal 1: http://localhost:8000/docs
 make web                      # terminal 2: http://localhost:3000
 ```
+
+New to the project? Open http://localhost:3000, click **Load sample documents** and then one
+of the example questions. The **?** button in the header explains the flow and lists things
+to try (German questions, a refusal, a follow-up, switching retrieval modes).
 
 Without `make`, the same steps are:
 

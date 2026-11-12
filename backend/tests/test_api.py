@@ -103,6 +103,29 @@ def test_upload_list_chat_delete(client: TestClient, txt_file: Path, docx_file: 
     assert client.get("/health").json()["documents"] == 1
 
 
+def test_load_sample_documents(client: TestClient, txt_file: Path, tmp_path: Path) -> None:
+    samples = tmp_path / "samples"
+    samples.mkdir()
+    (samples / "policy.txt").write_bytes(txt_file.read_bytes())
+    state: AppState = client.app.state.documind
+    state.settings = state.settings.model_copy(update={"sample_docs_dir": samples})
+
+    r = client.post("/documents/samples")
+    assert r.status_code == 201
+    assert [d["filename"] for d in r.json()] == ["policy.txt"]
+    assert len(client.get("/documents").json()) == 1
+
+    # calling it again does not duplicate anything (content hash)
+    assert len(client.post("/documents/samples").json()) == 1
+    assert len(client.get("/documents").json()) == 1
+
+
+def test_load_sample_documents_missing_dir_is_404(client: TestClient, tmp_path: Path) -> None:
+    state: AppState = client.app.state.documind
+    state.settings = state.settings.model_copy(update={"sample_docs_dir": tmp_path / "nope"})
+    assert client.post("/documents/samples").status_code == 404
+
+
 def test_upload_rejects_unsupported_type(client: TestClient) -> None:
     r = client.post("/documents", files=[("files", ("photo.png", b"\x89PNG", "image/png"))])
     assert r.status_code == 400

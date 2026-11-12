@@ -30,16 +30,16 @@ export default function AnswerText({ text, citations, onCite, active }: Props) {
             type="button"
             onClick={() => onCite(cit)}
             title={`${cit.document_name}${cit.page ? `, page ${cit.page}` : ""}`}
-            className={`mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 align-text-bottom text-[11px] font-semibold transition ${
+            className={`mx-0.5 inline-flex h-[20px] min-w-[20px] items-center justify-center rounded-md border px-1.5 align-text-bottom font-mono text-[11px] font-medium transition ${
               active === n
-                ? "bg-indigo-600 text-white"
-                : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                ? "border-accent bg-accent text-accent-ink"
+                : "border-accent/30 bg-accent-soft text-accent hover:border-accent"
             }`}
           >
             {n}
           </button>
         ) : (
-          <span key={key++} className="text-slate-400">
+          <span key={key++} className="text-ink-3">
             [{n}]
           </span>
         ),
@@ -48,5 +48,5 @@ export default function AnswerText({ text, citations, onCite, active }: Props) {
     last = start + match[0].length;
   }
   if (last < text.length) parts.push(<span key={key++}>{text.slice(last)}</span>);
-  return <p className="whitespace-pre-wrap leading-relaxed">{parts}</p>;
+  return <p className="whitespace-pre-wrap leading-[1.7]">{parts}</p>;
 }

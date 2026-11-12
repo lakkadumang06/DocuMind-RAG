@@ -182,6 +182,24 @@ async def upload_documents(
     return results
 
 
+@router.post(
+    "/documents/samples",
+    response_model=list[DocumentInfo],
+    status_code=status.HTTP_201_CREATED,
+    tags=["documents"],
+)
+def load_sample_documents(state: State) -> list[DocumentInfo]:
+    """Ingest the bundled sample documents from `data/sample_docs`, so a new user can try
+    the assistant without uploading anything. Already indexed files are skipped."""
+    directory = state.settings.sample_docs_dir
+    if not directory.is_dir():
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"No sample documents at {directory}. Run `make sample-docs` first.",
+        )
+    return state.pipeline.ingest_directory(directory)
+
+
 @router.delete(
     "/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["documents"]
 )

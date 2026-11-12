@@ -55,10 +55,12 @@ backend/app/
   ingest/          parsers.py -> chunking.py -> store.py (Qdrant) + bm25_index.py, orchestrated by pipeline.py
   retrieval/       vector.py (dense), bm25.py, hybrid.py (Reciprocal Rank Fusion), rerank.py (LLM, off by default)
   rag/             prompts.py, memory.py (session history + query rewrite), answer.py (RagAnswerer + CLI)
-  api.py           FastAPI routes; AppState wires everything; /chat streams Server-Sent Events
+  api.py           FastAPI routes; AppState wires everything; /chat streams Server-Sent Events;
+                   POST /documents/samples indexes data/sample_docs for first-time users
 backend/evals/     dataset.json (35 golden questions), run_evals.py, results.md
 backend/tests/     pytest suite using in-memory Qdrant, DeterministicFakeEmbedding and fake chat models
-frontend/          app/page.tsx, components/ (Sidebar, Chat, AnswerText, CitationPanel, DebugPanel), lib/api.ts
+frontend/          app/page.tsx, components/ (Header, Sidebar, Chat, AnswerText, CitationPanel, DebugPanel,
+                   HowItWorks, ThemeToggle), lib/api.ts; design tokens live in app/globals.css (light + dark)
 scripts/           make_sample_docs.py (fictional "Rheintal Antriebstechnik GmbH" documents)
 data/              sample_docs/ (committed), index/ and uploads/ (generated, gitignored)
 docs/              architecture.md, screenshots
@@ -94,6 +96,10 @@ docs/              architecture.md, screenshots
 - No placeholders or TODOs. Keep code simple enough to explain in an interview.
 - Frontend types in `frontend/lib/types.ts` mirror `backend/app/schemas.py` by hand. Change
   both together.
+- Frontend colours are CSS variables in `app/globals.css` (`--accent`, `--surface`, ...) exposed
+  as Tailwind utilities (`bg-surface`, `text-ink-2`). Use those, never raw Tailwind palette
+  colours, so dark mode keeps working. Layout breakpoints: `lg` shows the sidebar column,
+  `xl` shows the citation panel inline; below that they are a drawer and a bottom sheet.
 - Commit messages use gitmoji and a plain, human summary of what changed and why, e.g.
   `🐛 Strip inline confidence markers from answers`.
 
@@ -110,6 +116,8 @@ docs/              architecture.md, screenshots
   corpora, which caused false refusals.
 - The SSE stream may use `\r\n` line endings; parsers in tests and `frontend/lib/api.ts`
   normalise them.
+- **Gemini free tier allows only 20 chat requests per day** per model. After that `/chat`
+  returns a 429 error event. Switch `LLM_PROVIDER=groq` (with `GROQ_API_KEY`) to keep working.
 - The API creates the LLM lazily, so it boots without a key; the first `/chat` then reports
   the missing key as an `error` event.
 - Conversation memory is in-process. It is lost on restart and not shared between workers.

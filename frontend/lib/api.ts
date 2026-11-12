@@ -24,6 +24,9 @@ export const getHealth = () => fetch(`${API_URL}/health`).then(handle<HealthResp
 export const listDocuments = () => fetch(`${API_URL}/documents`).then(handle<DocumentInfo[]>);
 export const deleteDocument = (id: string) =>
   fetch(`${API_URL}/documents/${id}`, { method: "DELETE" }).then(handle<void>);
+/** Index the bundled sample documents so a first-time user has something to ask about. */
+export const loadSampleDocuments = () =>
+  fetch(`${API_URL}/documents/samples`, { method: "POST" }).then(handle<DocumentInfo[]>);
 
 /** Upload with progress events; XMLHttpRequest is the only browser API that reports them. */
 export function uploadDocuments(

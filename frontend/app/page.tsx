@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PanelLeft } from "lucide-react";
+import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import Chat from "@/components/Chat";
 import CitationPanel from "@/components/CitationPanel";
-import { API_URL, deleteDocument, getHealth, listDocuments } from "@/lib/api";
+import HowItWorks from "@/components/HowItWorks";
+import { deleteDocument, getHealth, listDocuments, loadSampleDocuments } from "@/lib/api";
 import type { Citation, DocumentInfo, HealthResponse } from "@/lib/types";
 
 export default function Page() {
@@ -16,8 +17,23 @@ export default function Page() {
   const [citation, setCitation] = useState<Citation | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sessionId, setSessionId] = useState("");
+  const [hasMessages, setHasMessages] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [loadingSamples, setLoadingSamples] = useState(false);
+  const [samplesError, setSamplesError] = useState<string | null>(null);
 
   useEffect(() => setSessionId(crypto.randomUUID()), []);
+
+  // Escape closes whichever overlay is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setSidebarOpen(false);
+      setCitation(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -41,58 +57,68 @@ export default function Page() {
     await refresh();
   };
 
+  const loadSamples = async () => {
+    setLoadingSamples(true);
+    setSamplesError(null);
+    try {
+      await loadSampleDocuments();
+      await refresh();
+    } catch (e) {
+      setSamplesError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoadingSamples(false);
+    }
+  };
+
   const resetSession = () => {
     setCitation(null);
     setSessionId(crypto.randomUUID());
   };
 
   return (
-    <main className="flex h-screen flex-col">
-      {/* status bar */}
-      <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500">
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded p-1 hover:bg-slate-100 md:hidden"
-            aria-label="Toggle documents"
-            onClick={() => setSidebarOpen((o) => !o)}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </button>
-          <span className="hidden sm:inline">API {API_URL}</span>
-        </div>
-        <div className="flex items-center gap-3">
-          {health && (
-            <>
-              <span>
-                LLM <b className="font-medium text-slate-700">{health.llm_provider}</b>
-              </span>
-              <span>
-                Embeddings <b className="font-medium text-slate-700">{health.embedding_provider}</b>
-              </span>
-            </>
-          )}
-          <span className="inline-flex items-center gap-1">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                apiError ? "bg-rose-500" : health?.status === "ok" ? "bg-emerald-500" : "bg-amber-500"
-              }`}
-            />
-            {apiError ? "API unreachable" : health?.status === "ok" ? "Healthy" : "Degraded"}
-          </span>
-        </div>
-      </header>
+    <main className="flex h-dvh flex-col">
+      <Header
+        health={health}
+        apiError={apiError}
+        canReset={hasMessages}
+        onReset={resetSession}
+        onOpenSidebar={() => setSidebarOpen(true)}
+        onHelp={() => setHelpOpen(true)}
+      />
+      <HowItWorks open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       <div className="relative flex min-h-0 flex-1">
-        {/* sidebar: drawer on mobile, column on md+ */}
-        <div
-          className={`absolute inset-y-0 left-0 z-20 w-72 transform transition-transform md:static md:translate-x-0 ${
-            sidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"
-          }`}
-        >
-          <Sidebar documents={documents} loading={loadingDocs} onChanged={refresh} onDelete={handleDelete} />
+        {/* Documents: fixed column on desktop, slide-in drawer below lg */}
+        <div className="hidden w-[300px] shrink-0 lg:block xl:w-[320px]">
+          <Sidebar
+            documents={documents}
+            loading={loadingDocs}
+            onChanged={refresh}
+            onDelete={handleDelete}
+            onLoadSamples={loadSamples}
+            loadingSamples={loadingSamples}
+          />
         </div>
         {sidebarOpen && (
-          <div className="absolute inset-0 z-10 bg-slate-900/30 md:hidden" onClick={() => setSidebarOpen(false)} />
+          <div className="absolute inset-0 z-30 lg:hidden">
+            <button
+              type="button"
+              aria-label="Dismiss documents"
+              onClick={() => setSidebarOpen(false)}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-[1px]"
+            />
+            <div className="drawer-left absolute inset-y-0 left-0 w-[min(88vw,340px)] shadow-card">
+              <Sidebar
+                documents={documents}
+                loading={loadingDocs}
+                onChanged={refresh}
+                onDelete={handleDelete}
+                onLoadSamples={loadSamples}
+                loadingSamples={loadingSamples}
+                onClose={() => setSidebarOpen(false)}
+              />
+            </div>
+          </div>
         )}
 
         <Chat
@@ -101,11 +127,25 @@ export default function Page() {
           onCite={setCitation}
           activeCitation={citation}
           onReset={resetSession}
+          onMessagesChange={setHasMessages}
+          onLoadSamples={loadSamples}
+          loadingSamples={loadingSamples}
+          samplesError={samplesError}
+          onHelp={() => setHelpOpen(true)}
         />
 
+        {/* Source: inline column on xl, right drawer on tablet, bottom sheet on phones */}
         {citation && (
-          <div className="absolute inset-y-0 right-0 z-20 w-full max-w-md shadow-xl lg:static lg:w-96 lg:shadow-none">
-            <CitationPanel citation={citation} onClose={() => setCitation(null)} />
+          <div className="absolute inset-0 z-30 xl:static xl:z-auto xl:w-[380px] xl:shrink-0">
+            <button
+              type="button"
+              aria-label="Dismiss source"
+              onClick={() => setCitation(null)}
+              className="absolute inset-0 bg-ink/40 backdrop-blur-[1px] xl:hidden"
+            />
+            <div className="sheet-up absolute inset-x-0 bottom-0 h-[78vh] overflow-hidden rounded-t-2xl shadow-card sm:drawer-right sm:inset-y-0 sm:left-auto sm:right-0 sm:h-auto sm:w-[min(90vw,420px)] sm:rounded-none xl:static xl:h-full xl:w-full xl:animate-none xl:shadow-none">
+              <CitationPanel citation={citation} onClose={() => setCitation(null)} />
+            </div>
           </div>
         )}
       </div>
