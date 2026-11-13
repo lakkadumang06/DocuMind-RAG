@@ -14,6 +14,7 @@ import hashlib
 import json
 import logging
 import sys
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from app.ingest.bm25_index import BM25Index
 from app.ingest.chunking import chunk_document, detect_language
 from app.ingest.parsers import SUPPORTED_EXTENSIONS, parse_file
 from app.ingest.store import VectorStore
-from app.schemas import DocumentInfo
+from app.schemas import Chunk, DocumentInfo
 
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,56 @@ class IngestionPipeline:
 
     def list_documents(self) -> list[DocumentInfo]:
         return sorted(self.manifest.documents.values(), key=lambda d: d.filename.lower())
+
+    def restore_from_vector_store(self) -> int:
+        """Rebuild the manifest and the BM25 index from the chunks stored in Qdrant.
+
+        Hosts with an ephemeral disk (for example Render's free plan) lose `data/index`
+        whenever the service restarts, while the vectors in Qdrant survive. Every point
+        carries its full Chunk as payload, so both local indexes can be rebuilt without
+        parsing or embedding anything. Does nothing if documents are already known.
+        Returns the number of restored documents.
+        """
+        if self.manifest.documents:
+            return 0
+        chunks = self.vector_store.all_chunks()
+        if not chunks:
+            return 0
+
+        by_document: dict[str, list[Chunk]] = {}
+        for chunk in chunks:
+            by_document.setdefault(chunk.document_id, []).append(chunk)
+
+        now = datetime.now(UTC)
+        for document_id, doc_chunks in by_document.items():
+            doc_chunks.sort(key=lambda c: c.chunk_index)
+            filename = doc_chunks[0].document_name
+            languages = Counter(c.language for c in doc_chunks)
+            self.manifest.documents[document_id] = DocumentInfo(
+                id=document_id,
+                filename=filename,
+                file_type=Path(filename).suffix.lower().lstrip("."),
+                language=languages.most_common(1)[0][0],
+                num_pages=max((c.page or 0) for c in doc_chunks),
+                num_chunks=len(doc_chunks),
+                size_bytes=self._known_file_size(filename),
+                ingested_at=now,
+            )
+
+        # add() mutates the existing index, so retrievers holding the same object see it
+        self.bm25.add([c for doc_chunks in by_document.values() for c in doc_chunks])
+        self.bm25.save(self.settings.bm25_index_path)
+        self.manifest.save()
+        logger.info("restored %d documents (%d chunks) from Qdrant", len(by_document), len(chunks))
+        return len(by_document)
+
+    def _known_file_size(self, filename: str) -> int:
+        """Size of the original file if it is still on disk (sample docs are), else 0."""
+        for directory in (self.settings.sample_docs_dir, self.settings.data_dir / "uploads"):
+            candidate = directory / filename
+            if candidate.is_file():
+                return candidate.stat().st_size
+        return 0
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -77,3 +77,46 @@ def test_dense_search_returns_ingested_chunk(
     hits = memory_store.search("warranty", k=2)
     assert len(hits) == 2
     assert all(isinstance(score, float) for _, score in hits)
+
+
+def test_restore_from_vector_store_after_disk_wipe(
+    txt_file: Path,
+    docx_file: Path,
+    pdf_file: Path,
+    memory_store: VectorStore,
+    test_settings: Settings,
+) -> None:
+    """A host with an ephemeral disk loses data/index; Qdrant still has every chunk."""
+    import shutil
+
+    pipeline = IngestionPipeline(memory_store.embeddings, memory_store, settings=test_settings)
+    infos = {i.id: i for i in pipeline.ingest_directory(txt_file.parent)}
+    assert pipeline.restore_from_vector_store() == 0  # documents already known: no-op
+
+    shutil.rmtree(test_settings.index_dir)  # simulate the restart
+    wiped = IngestionPipeline(memory_store.embeddings, memory_store, settings=test_settings)
+    assert wiped.list_documents() == [] and len(wiped.bm25) == 0
+    bm25_before = wiped.bm25
+
+    assert wiped.restore_from_vector_store() == 3
+    assert wiped.bm25 is bm25_before  # mutated in place: retrievers keep their reference
+    assert len(wiped.bm25) == memory_store.count()
+    assert wiped.bm25.search("RMA number", k=3)
+    for restored in wiped.list_documents():
+        original = infos[restored.id]
+        assert restored.filename == original.filename
+        assert restored.file_type == original.file_type
+        assert restored.language == original.language
+        assert restored.num_chunks == original.num_chunks
+
+    # both files are back on disk, so the next start loads them without touching Qdrant
+    again = IngestionPipeline(memory_store.embeddings, memory_store, settings=test_settings)
+    assert len(again.list_documents()) == 3 and len(again.bm25) == len(wiped.bm25)
+
+
+def test_restore_with_empty_vector_store(
+    memory_store: VectorStore, test_settings: Settings
+) -> None:
+    pipeline = IngestionPipeline(memory_store.embeddings, memory_store, settings=test_settings)
+    assert pipeline.restore_from_vector_store() == 0
+    assert pipeline.list_documents() == []

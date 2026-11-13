@@ -108,6 +108,27 @@ class VectorStore:
         flt = _document_filter(document_id) if document_id else None
         return self.client.count(self.collection, count_filter=flt, exact=True).count
 
+    def all_chunks(self, page_size: int = 256) -> list[Chunk]:
+        """Every stored chunk, read from the point payloads (no vectors, no embedding call).
+
+        Used to rebuild the BM25 index and the manifest after the local disk was wiped.
+        """
+        if not self.client.collection_exists(self.collection):
+            return []
+        chunks: list[Chunk] = []
+        offset = None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=self.collection,
+                limit=page_size,
+                offset=offset,
+                with_payload=True,
+                with_vectors=False,
+            )
+            chunks.extend(Chunk.model_validate(p.payload) for p in points)
+            if offset is None:
+                return chunks
+
     def search(self, query: str, k: int = 10) -> list[tuple[Chunk, float]]:
         """Dense similarity search. Returns (chunk, cosine_similarity) pairs, best first."""
         if not self.client.collection_exists(self.collection):

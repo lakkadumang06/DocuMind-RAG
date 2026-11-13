@@ -58,6 +58,10 @@ class AppState:
         embeddings = get_embeddings(settings=settings)
         store = VectorStore(embeddings, settings=settings)
         pipeline = IngestionPipeline(embeddings, store, settings=settings)
+        try:  # the local index is lost on hosts with an ephemeral disk; Qdrant still has it
+            pipeline.restore_from_vector_store()
+        except Exception:  # noqa: BLE001 - never block startup; /health reports Qdrant state
+            logger.exception("could not restore the index from Qdrant")
         retriever = HybridRetriever(
             DenseRetriever(store),
             BM25Retriever(index=pipeline.bm25),  # same object: ingestion updates are visible

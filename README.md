@@ -43,7 +43,7 @@ DocuMind is my answer to that problem and a portfolio project for AI working-stu
 | Model layer | `get_llm()` / `get_embeddings()` for OpenAI, Anthropic, Gemini, Groq and local Ollama. Switch with two environment variables. Only `llm.py` imports vendor SDKs. |
 | API | FastAPI: `POST /documents` (upload + ingest), `POST /documents/samples` (index the bundled sample files), `GET /documents`, `DELETE /documents/{id}`, `POST /chat` (Server-Sent Events: streamed tokens, then a final event with citations), `GET /health`. |
 | UI | Next.js 16 + TypeScript + Tailwind: responsive three-column layout (drawer and bottom sheet on phones), light and dark mode, one-click sample documents and a "How it works" guide for new users, drag-and-drop upload with progress, streamed chat, clickable citation chips, retrieval mode toggle, collapsible retrieval debug panel with scores, and an `/about` page that explains the pipeline. |
-| Quality | 64 pytest tests that run **without API keys** (in-memory Qdrant, fake embeddings, fake LLM), ruff, GitHub Actions CI for backend, frontend and Docker images. |
+| Quality | 66 pytest tests that run **without API keys** (in-memory Qdrant, fake embeddings, fake LLM), ruff, GitHub Actions CI for backend, frontend and Docker images. |
 
 ## Architecture
 
@@ -192,8 +192,10 @@ Steps:
 
 Free-tier notes: services sleep after 15 minutes without traffic, so the first request takes
 up to a minute. The API's disk is ephemeral, so uploads, the manifest and the BM25 index are
-lost on every deploy; the vectors in Qdrant Cloud survive. Re-load the samples after a deploy,
-or attach a Render Disk at `/app/data` on a paid plan. Gemini's free tier allows 20 chat
+lost on every restart; the vectors in Qdrant Cloud survive. On startup the API rebuilds the
+manifest and the BM25 index from the chunk payloads stored in Qdrant, without embedding
+anything again, so indexed documents stay available after a sleep or a deploy. Only the
+original uploaded files are gone; attach a Render Disk at `/app/data` on a paid plan to keep them. Gemini's free tier allows 20 chat
 requests per day; switch to `LLM_PROVIDER=groq` with a `GROQ_API_KEY` for more.
 
 ## Evaluation results

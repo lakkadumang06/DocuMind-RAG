@@ -121,4 +121,7 @@ docs/              architecture.md, screenshots
 - The API creates the LLM lazily, so it boots without a key; the first `/chat` then reports
   the missing key as an `error` event.
 - Conversation memory is in-process. It is lost on restart and not shared between workers.
+- **Ephemeral disks lose `data/index`** (Render free plan, on every restart). `AppState.from_settings`
+  calls `pipeline.restore_from_vector_store()`, which rebuilds the manifest and BM25 from the Chunk
+  payloads in Qdrant. It mutates the existing `BM25Index`, because the retriever shares that object.
 - `.env` is gitignored and holds real keys. Never print, log or commit its values.
