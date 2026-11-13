@@ -53,5 +53,5 @@ jobs:
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t documind-api ./backend
+      - run: docker build -f backend/Dockerfile -t documind-api .
       - run: docker build -t documind-web ./frontend

@@ -8,6 +8,9 @@
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![Qdrant](https://img.shields.io/badge/Qdrant-1.20-DC244C)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![Live demo](https://img.shields.io/badge/Live%20demo-Render-46E3B7?logo=render&logoColor=white)](https://documind-web-zcgz.onrender.com)
+
+**Live demo:** [documind-web-zcgz.onrender.com](https://documind-web-zcgz.onrender.com) · [API docs](https://documind-api-hcob.onrender.com/docs). It runs on Render's free tier, so the first request after a quiet period takes up to a minute while the services wake up.
 
 ![DocuMind chat with citation panel](docs/screenshot-chat-citation.png)
 
@@ -39,8 +42,8 @@ DocuMind is my answer to that problem and a portfolio project for AI working-stu
 | Memory | Per-session conversation history with query rewriting, so "and what about the warranty?" becomes a standalone question. |
 | Model layer | `get_llm()` / `get_embeddings()` for OpenAI, Anthropic, Gemini, Groq and local Ollama. Switch with two environment variables. Only `llm.py` imports vendor SDKs. |
 | API | FastAPI: `POST /documents` (upload + ingest), `POST /documents/samples` (index the bundled sample files), `GET /documents`, `DELETE /documents/{id}`, `POST /chat` (Server-Sent Events: streamed tokens, then a final event with citations), `GET /health`. |
-| UI | Next.js 16 + TypeScript + Tailwind: responsive three-column layout (drawer and bottom sheet on phones), light and dark mode, one-click sample documents and a "How it works" guide for new users, drag-and-drop upload with progress, streamed chat, clickable citation chips, retrieval mode toggle, collapsible retrieval debug panel with scores. |
-| Quality | 61 pytest tests that run **without API keys** (in-memory Qdrant, fake embeddings, fake LLM), ruff, GitHub Actions CI for backend, frontend and Docker images. |
+| UI | Next.js 16 + TypeScript + Tailwind: responsive three-column layout (drawer and bottom sheet on phones), light and dark mode, one-click sample documents and a "How it works" guide for new users, drag-and-drop upload with progress, streamed chat, clickable citation chips, retrieval mode toggle, collapsible retrieval debug panel with scores, and an `/about` page that explains the pipeline. |
+| Quality | 64 pytest tests that run **without API keys** (in-memory Qdrant, fake embeddings, fake LLM), ruff, GitHub Actions CI for backend, frontend and Docker images. |
 
 ## Architecture
 
@@ -166,21 +169,32 @@ and page-level citations actually matter.
 
 ## Deploy on Render
 
-`render.yaml` describes two free Docker web services (`documind-api`, `documind-web`). Qdrant
-is not hosted on Render; use the free tier of [Qdrant Cloud](https://cloud.qdrant.io).
+The live demo runs on [Render](https://render.com) and [Qdrant Cloud](https://cloud.qdrant.io),
+both on free tiers. `render.yaml` describes the two services:
 
-1. Create a Qdrant Cloud cluster and copy its URL and API key.
-2. Render dashboard -> **New** -> **Blueprint** -> select this repository. Render reads
-   `render.yaml` and asks for the secret values: `GOOGLE_API_KEY` (or `GROQ_API_KEY`),
-   `QDRANT_URL`, `QDRANT_API_KEY`.
-3. If you rename the services, update `CORS_ORIGINS` on the API and `NEXT_PUBLIC_API_URL`
-   on the web service to match the new `*.onrender.com` hostnames and redeploy the web
-   service (the URL is baked in at build time).
-4. Open the web URL and click **Load sample documents**.
+| Service | Runtime | Source | Notes |
+|---|---|---|---|
+| `documind-api` | Docker (`backend/Dockerfile`, build context = repo root) | FastAPI backend | Ships the sample documents inside the image, binds to Render's `PORT`, health check on `/health`. |
+| `documind-web` | Node 22 (`npm ci && npm run build`, `npm start`) | `frontend/` | `NEXT_PUBLIC_API_URL` is baked in at build time, so changing it needs a redeploy. |
+
+Steps:
+
+1. Create a free cluster on Qdrant Cloud. Copy its endpoint (append `:6333`) and create an
+   API key.
+2. In Render choose **New → Blueprint** and select this repository. Render reads `render.yaml`
+   and asks for the secrets: `GOOGLE_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY`.
+3. Render appends a random suffix to the hostnames (for example `documind-api-hcob`). Set
+   `NEXT_PUBLIC_API_URL` on the web service to the real API URL and `CORS_ORIGINS` on the API
+   to `["https://<web-host>.onrender.com"]`, either in `render.yaml` or on each service's
+   **Environment** page, then let both redeploy.
+4. Open the web URL and click **Load sample documents**, or call
+   `POST /documents/samples` on the API.
 
 Free-tier notes: services sleep after 15 minutes without traffic, so the first request takes
-about a minute; the disk is ephemeral, so uploads and the BM25 index are lost on every deploy
-or restart (re-load the samples, or attach a Render Disk at `/app/data` on a paid plan).
+up to a minute. The API's disk is ephemeral, so uploads, the manifest and the BM25 index are
+lost on every deploy; the vectors in Qdrant Cloud survive. Re-load the samples after a deploy,
+or attach a Render Disk at `/app/data` on a paid plan. Gemini's free tier allows 20 chat
+requests per day; switch to `LLM_PROVIDER=groq` with a `GROQ_API_KEY` for more.
 
 ## Evaluation results
 
@@ -286,10 +300,13 @@ backend/app/
   api.py           FastAPI routes and SSE streaming
 backend/tests/     pytest suite with fakes, no network
 backend/evals/     dataset.json, run_evals.py, results.md
-frontend/          Next.js App Router UI
+frontend/          Next.js App Router UI (app/page.tsx chat, app/about/ pipeline explainer)
 scripts/           make_sample_docs.py
 data/sample_docs/  the 8 generated documents
 docs/              architecture.md, screenshots
+backend/Dockerfile, frontend/Dockerfile, docker-compose.yml   local containers
+render.yaml        Render blueprint for the live demo
+.github/workflows/ci.yml   tests, lint, typecheck and Docker builds on every push
 ```
 
 ## Limitations
