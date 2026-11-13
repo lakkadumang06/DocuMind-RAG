@@ -1,4 +1,4 @@
-# Render Blueprint: two Docker web services. Qdrant runs on Qdrant Cloud (free tier).
+# Render Blueprint: Docker API + native Node web service. Qdrant runs on Qdrant Cloud (free tier).
 # Dashboard -> New -> Blueprint -> pick this repo. Fill in the sync: false values when asked.
 services:
   - type: web
@@ -32,12 +32,13 @@ services:
 
   - type: web
     name: documind-web
-    runtime: docker
+    runtime: node
     plan: free
-    dockerfilePath: ./frontend/Dockerfile
-    dockerContext: ./frontend
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
     envVars:
-      - key: PORT
-        value: "3000"
+      - key: NODE_VERSION
+        value: "22"
       - key: NEXT_PUBLIC_API_URL
         value: https://documind-api.onrender.com
