@@ -26,7 +26,7 @@ services:
       - key: QDRANT_COLLECTION
         value: documind_chunks
       - key: CORS_ORIGINS
-        value: '["https://documind-web.onrender.com"]'
+        value: '["https://documind-web-zcgz.onrender.com"]'
       - key: LOG_LEVEL
         value: INFO
 
